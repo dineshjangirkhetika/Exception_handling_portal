@@ -15,7 +15,7 @@ This leads to:
 
 Our solution addresses the lack of real-time operational exception visibility in warehouse and logistics operations. We built a **centralized Exception Management System (EMS)** that provides:
 
-- **Real-time exception logging** via Android applications (Picker App, Driver App) and web dashboard
+- **Real-time exception logging** via Android applications (SuperDisha and SuperOps apps) and web dashboard
 - **Clear ownership and lifecycle-based status tracking** with defined status flows per module
 - **Backend-triggered mobile notifications** via FCM to responsible users on every status change
 - **Automated Daily Top 10 issue ranking** using a weighted scoring formula for management prioritization
@@ -28,7 +28,7 @@ The system covers **7 functional modules**: QC Failure Tracking, Stock Mismatch 
 ```
 +---------------------+       +-------------------------+       +----------------------------+
 |    Android Apps      |       |    React 19 Dashboard   |       |    Supabase Backend        |
-|  (Picker / Driver)   | ----> |     (Web Portal)        | ----> |  (PostgreSQL + REST API)   |
+| (SuperDisha/SuperOps)| ----> |     (Web Portal)        | ----> |  (PostgreSQL + REST API)   |
 +---------------------+       +-------------------------+       +----------------------------+
         |                              |                                    |
         |  Report exceptions           |  View / Manage / Track            |  Auto-generated REST API
@@ -63,7 +63,7 @@ The system covers **7 functional modules**: QC Failure Tracking, Stock Mismatch 
 | **Database** | PostgreSQL (hosted on Supabase Cloud, Mumbai region) |
 | **Cloud/Infra** | GitHub Pages (frontend hosting), Supabase Cloud (database + API) |
 | **Notifications** | Firebase Cloud Messaging (FCM) for push notifications |
-| **Mobile** | Android (Picker App, Driver App) |
+| **Mobile** | Android (SuperDisha App, SuperOps App) |
 | **CI/CD** | GitHub Pages deployment via `gh-pages` |
 
 ## Database
@@ -72,11 +72,11 @@ The application uses a **Supabase PostgreSQL** database with 5 tables, auto-gene
 
 | Table | Fields | Records | Description |
 |-------|--------|---------|-------------|
-| `qc_failures` | 20 | 7+ | QC failure tracking with item details, batch info, QR codes, reasons, and corrective actions |
-| `stock_mismatch` | 11 | 5+ | Stock inventory discrepancy alerts with scenario classification and verification workflow |
-| `dispatch_support_logs` | 13 | 5+ | Dispatch, picking, and loading issue logs with photo support and issue categorization |
-| `route_issues` | 14 | 5+ | Route delay and incident reports with GPS coordinates and help request flags |
-| `operation_errors` | 8 | 6+ | General operational and system error tracking |
+| `qc_failures` | 19 | 17+ | QC failure tracking with item details, batch info, QR codes, reasons, and corrective actions (captured from SuperDisha app) |
+| `stock_mismatch` | 11 | 11+ | Stock inventory discrepancy alerts with scenario classification and verification workflow (captured from SuperDisha app) |
+| `dispatch_support_logs` | 13 | 12+ | Dispatch, picking, and loading issue logs with photo support and issue categorization (captured from SuperOps app) |
+| `route_issues` | 14 | 11+ | Route delay and incident reports with GPS coordinates and help request flags (captured from SuperOps app) |
+| `operation_errors` | 8 | 14+ | General operational and system error tracking (captured from SuperOps app) |
 
 **Database Features:**
 - Row Level Security (RLS) with public read/insert/update policies
@@ -97,22 +97,27 @@ The application uses a **Supabase PostgreSQL** database with 5 tables, auto-gene
 
 Record, monitor, and resolve product quality issues identified during picking.
 
-**Status Lifecycle:** `OPEN` -> `ACTION_TAKEN` -> `CLOSED`
+**Status Lifecycle:** `OPEN` -> `DUMPED` / `REPACKING` / `FUMIGATION` -> `CLOSED`
 
-**Action Types:** `DUMPED` | `REPACKING` | `FUMIGATION`
+**Status Options:**
+- `DUMPED` -- Item disposed due to irreparable quality issue
+- `REPACKING` -- Item sent for repacking and correction
+- `FUMIGATION` -- Item sent for fumigation treatment
 
-**Fields tracked:** Item ID, Item Name, Brand, QR ID, Batch ID, Expiry Date, Variety, Quantity, Reason, Warehouse, Created By, Phone Number, Notify Phone, Status, Action Type
+**Fields tracked:** Item ID, Item Name, Brand, QR ID, Batch ID, Expiry Date, Variety, Quantity, Reason, Warehouse, Created By, Phone Number, Notify Phone, Status
 
 **Repacking Business Logic:**
-- When status = ACTION_TAKEN and action_type = REPACKING:
+- When status = REPACKING:
   1. Mark failed stock as corrected
   2. Make item available again for picking
   3. Trigger notification to original picker
 
 **Notification Triggers:**
 - On QC Creation -> Notify picker allocator (NOTIFY_PHONE)
-- On Status Update -> Notify picker (PHONE_NUMBER)
+- On Status Update -> Notify creator with success message
 - On Repacking Completion -> Notify picker that item is ready for picking again
+
+**Data Source:** All QC failure records are captured from **SuperDisha** app by warehouse pickers during quality checks.
 
 **Business Impact:** Reduced dispatch of defective goods, faster corrective action tracking, improved warehouse accountability, better inventory control after repacking.
 
@@ -264,9 +269,9 @@ Score = (5 x 2) + 8 = 18
 Real-time communication to responsible users when exceptions are created, updated, status changed from dashboard, or escalated.
 
 **Notification Trigger Conditions:**
-- `OPEN` -> `ACTION_TAKEN`
+- `OPEN` -> `DUMPED` / `REPACKING` / `FUMIGATION`
 - `OPEN` -> `CLOSED`
-- `INVESTIGATING` -> `CLOSED`
+- `IN_PROGRESS` -> `RESOLVED`
 - `SUPPORT_SENT` -> `RESOLVED`
 
 **Delivery Mechanism:**
@@ -389,7 +394,7 @@ We built a **centralized Exception Management System** -- a web-based platform t
 
 **Key Features:**
 1. Real-time exception tracking across 5 critical categories -- QC Failures, Stock Mismatch, Dispatch Issues, Route Delays, and Operation Errors
-2. Lifecycle-based status tracking with defined status flows per module (OPEN -> ACTION_TAKEN -> CLOSED, OPEN -> VERIFIED -> RESOLVED, etc.)
+2. Lifecycle-based status tracking with defined status flows per module (OPEN -> DUMPED/REPACKING/FUMIGATION -> CLOSED, OPEN -> VERIFIED -> RESOLVED, etc.)
 3. Automated Daily Top 10 issue ranking engine using weighted scoring: `Score = (Today Count x 2) + Last 7 Days Repeat Count`
 4. Real-time push notifications via FCM on exception creation, status changes, and escalations with role-based routing
 5. Repacking business logic -- automatically makes corrected items available for picking and notifies the original picker
@@ -397,7 +402,7 @@ We built a **centralized Exception Management System** -- a web-based platform t
 7. One-click sample entry for rapid demo and testing
 
 **Technical Highlights:**
-- Architecture: React 19 SPA + Supabase PostgreSQL with auto-generated REST API
+- Architecture: React 19 SPA + Supabase PostgreSQL with auto-generated REST API; records captured from SuperDisha and SuperOps Android apps
 - Scalable design using Supabase Cloud (PostgreSQL + Row Level Security + DB Triggers)
 - 5 PostgreSQL tables with 65+ fields covering complete exception lifecycle
 - Database triggers for automatic IST date population on insert

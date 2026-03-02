@@ -58,7 +58,7 @@ export default function DashboardHome({ onSelect }) {
         <div>
           <h1 className="dashboard-title">Exception Management System</h1>
           <p className="dashboard-subtitle">
-            Monitor and manage operational exceptions in real-time.
+            All records are captured from SuperDisha and SuperOps apps. Monitor and manage operational exceptions in real-time.
           </p>
         </div>
        
