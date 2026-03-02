@@ -125,6 +125,7 @@ const SAMPLE_GENERATORS = {
     const reasons = ["Damaged packaging", "Short expiry", "Weight mismatch", "QUALITY_ISSUE", "EXPIRED"];
     const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
     const item = items[Math.floor(Math.random() * items.length)];
+    const now = new Date();
     return {
       item_id: item.id,
       item_name: item.name,
@@ -141,13 +142,15 @@ const SAMPLE_GENERATORS = {
       notify_phone: `99999${Math.floor(Math.random() * 90000) + 10000}`,
       status: "OPEN",
       action_type: "",
-      status_updated_by: ""
+      status_updated_by: "",
+      date: `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
     };
   },
   STOCK_MISMATCH: () => {
     const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
     const scenarios = ["SYSTEM_QTY_MORE_THAN_PHYSICAL", "SYSTEM_QTY_LESS_THAN_PHYSICAL", "PHYSICAL_QTY_ZERO"];
     const actions = ["Cycle count required", "Update system inventory", "Block item for sale", "Verification required"];
+    const now = new Date();
     return {
       item_id: `10047846${Math.floor(Math.random() * 900) + 100}`,
       warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
@@ -156,7 +159,8 @@ const SAMPLE_GENERATORS = {
       notify_phone: `99999${Math.floor(Math.random() * 90000) + 10000}`,
       status: "OPEN",
       scenario: scenarios[Math.floor(Math.random() * scenarios.length)],
-      action_required: actions[Math.floor(Math.random() * actions.length)]
+      action_required: actions[Math.floor(Math.random() * actions.length)],
+      date: `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
     };
   },
   DISPATCH_LOGS: () => {
@@ -169,6 +173,7 @@ const SAMPLE_GENERATORS = {
       "Short delivery reported"
     ];
     const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    const now = new Date();
     return {
       issue_category: categories[Math.floor(Math.random() * categories.length)],
       order_id: `ORD-${Math.floor(Math.random() * 90000) + 10000}`,
@@ -179,7 +184,8 @@ const SAMPLE_GENERATORS = {
       warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
       created_by: `ops_${Math.floor(Math.random() * 10) + 1}`,
       phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
-      status: "OPEN"
+      status: "OPEN",
+      date: `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
     };
   },
   ROUTE_ISSUES: () => {
@@ -191,6 +197,7 @@ const SAMPLE_GENERATORS = {
       "Engine overheating",
       "Road blocked due to accident"
     ];
+    const now = new Date();
     return {
       route_id: `ROUTE-${String(Math.floor(Math.random() * 10) + 1).padStart(2, "0")}`,
       driver_id: `DRV-${String(Math.floor(Math.random() * 10) + 1).padStart(3, "0")}`,
@@ -202,7 +209,8 @@ const SAMPLE_GENERATORS = {
       need_help: Math.random() > 0.5,
       created_by: `driver_${Math.floor(Math.random() * 10) + 1}`,
       phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
-      status: "OPEN"
+      status: "OPEN",
+      date: `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
     };
   },
   OPERATION_ERRORS: () => {
@@ -216,12 +224,14 @@ const SAMPLE_GENERATORS = {
       "Label printer offline at dispatch counter"
     ];
     const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    const now = new Date();
     return {
       description: descriptions[Math.floor(Math.random() * descriptions.length)],
       warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
       created_by: ["system", "ops_team", "sre_team"][Math.floor(Math.random() * 3)],
       phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
-      status: "OPEN"
+      status: "OPEN",
+      date: `${now.getDate()}-${now.getMonth() + 1}-${now.getFullYear()}`
     };
   }
 };
@@ -281,21 +291,20 @@ function buildNotificationMessage(category, previousStatus, record, newStatus) {
   return "Status updated. Notification sent.";
 }
 
-// Helper: get today in DD-MM-YYYY
+// Helper: get today in D-M-YYYY (no leading zeros)
 function getTodayDMY() {
   const d = new Date();
-  const day = String(d.getDate()).padStart(2, "0");
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  return `${day}-${m}-${d.getFullYear()}`;
+  return `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
 }
 
 export default function CategoryScreen({ category, onBack }) {
   const [toast, setToast] = useState(null);
-  const [records, setRecords] = useState(() => getCachedRecords(category));
-  const [loading, setLoading] = useState(true);
+  const initialRecords = getCachedRecords(category);
+  const [records, setRecords] = useState(initialRecords);
+  const [loading, setLoading] = useState(initialRecords.length === 0);
   const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(getTodayDMY());
+  const [selectedDate, setSelectedDate] = useState("");
 
   const config = CATEGORY_CONFIG[category] || {
     label: category.replace("_", " "),
@@ -305,7 +314,7 @@ export default function CategoryScreen({ category, onBack }) {
 
   const loadRecords = useCallback(async () => {
     const data = await fetchRecords(category);
-    if (data.length > 0) setRecords(data);
+    setRecords(data);
     setLoading(false);
     setRefreshing(false);
   }, [category]);
@@ -330,14 +339,15 @@ export default function CategoryScreen({ category, onBack }) {
       if (result) {
         setToast("New entry added successfully!");
         setSelectedDate(getTodayDMY());
-        await loadRecords();
+        loadRecords();
       } else {
-        setToast("Failed to add entry. Please try again.");
+        setToast("Failed to add entry. Check console for details.");
       }
-    } catch {
-      setToast("Network error. Please try again.");
+    } catch (err) {
+      console.error("Add entry error:", err);
+      setToast("Network error: " + (err.message || "Please try again."));
     }
-    setTimeout(() => setToast(null), 3500);
+    setTimeout(() => setToast(null), 4000);
     setAdding(false);
   };
 
@@ -361,8 +371,15 @@ export default function CategoryScreen({ category, onBack }) {
 
   const filteredRecords = records.filter(r => {
     if (!selectedDate) return true;
-    // Use the date column (DD-MM-YYYY) from DB for filtering
-    return r.date === selectedDate;
+    // Use the date column (D-M-YYYY) from DB for filtering
+    if (r.date) return r.date === selectedDate;
+    // Fallback: derive date from created_at if date column missing
+    if (r.created_at) {
+      const d = new Date(r.created_at);
+      const derived = `${d.getDate()}-${d.getMonth() + 1}-${d.getFullYear()}`;
+      return derived === selectedDate;
+    }
+    return false;
   });
 
   const visibleColumns =
@@ -407,10 +424,10 @@ export default function CategoryScreen({ category, onBack }) {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <label>
-            Date (DD-MM-YYYY):
+            Date (D-M-YYYY):
             <input
               type="text"
-              placeholder="DD-MM-YYYY"
+              placeholder="D-M-YYYY"
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
               style={{ width: "120px", marginLeft: "6px", padding: "4px 8px" }}

@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import SEED_DATA from "./seedData";
 
 const SUPABASE_URL = "https://twaohpngrwurqxlswfjv.supabase.co";
 const SUPABASE_ANON_KEY =
@@ -18,17 +19,35 @@ export function getTableName(category) {
   return TABLE_MAP[category] || category;
 }
 
-// --- Local cache helpers ---
-function getCacheKey(category) {
-  return `ems_cache_${category}`;
+// --- Seed data fallback ---
+function getSeedData(category) {
+  return SEED_DATA[category] || [];
 }
+
+// --- Local cache helpers ---
+const CACHE_VERSION = "v3";
+
+function getCacheKey(category) {
+  return `ems_${CACHE_VERSION}_${category}`;
+}
+
+// Clear old cache entries on load
+(function clearOldCache() {
+  try {
+    const keys = Object.keys(localStorage);
+    keys.forEach(k => {
+      if (k.startsWith("ems_") && !k.startsWith(`ems_${CACHE_VERSION}_`)) {
+        localStorage.removeItem(k);
+      }
+    });
+  } catch {}
+})();
 
 function getCache(category) {
   try {
     const raw = localStorage.getItem(getCacheKey(category));
     if (!raw) return null;
     const { data, ts } = JSON.parse(raw);
-    // Cache valid for 10 minutes
     if (Date.now() - ts < 10 * 60 * 1000) return data;
   } catch {}
   return null;
@@ -44,7 +63,7 @@ function setCache(category, data) {
 }
 
 // --- Timeout wrapper ---
-function withTimeout(promise, ms = 8000) {
+function withTimeout(promise, ms = 30000) {
   return Promise.race([
     promise,
     new Promise((_, reject) =>
@@ -56,7 +75,7 @@ function withTimeout(promise, ms = 8000) {
 // --- Public API ---
 
 export function getCachedRecords(category) {
-  return getCache(category) || [];
+  return getCache(category) || getSeedData(category);
 }
 
 export async function fetchRecords(category) {
@@ -67,14 +86,17 @@ export async function fetchRecords(category) {
     );
     if (error) {
       console.error(`Error fetching ${table}:`, error);
-      return getCache(category) || [];
+      return getCache(category) || getSeedData(category);
     }
     const records = data || [];
-    setCache(category, records);
-    return records;
+    if (records.length > 0) {
+      setCache(category, records);
+      return records;
+    }
+    return getSeedData(category);
   } catch (err) {
     console.error(`Fetch timeout/error for ${table}:`, err);
-    return getCache(category) || [];
+    return getCache(category) || getSeedData(category);
   }
 }
 
@@ -102,15 +124,16 @@ export async function insertRecord(category, record) {
   const table = getTableName(category);
   try {
     const { data, error } = await withTimeout(
-      supabase.from(table).insert([record]).select()
+      supabase.from(table).insert([record]).select(),
+      15000
     );
     if (error) {
-      console.error(`Error inserting into ${table}:`, error);
+      console.error(`Error inserting into ${table}:`, error.message, error.details, error.hint);
       return null;
     }
     return data?.[0] || null;
   } catch (err) {
-    console.error(`Insert timeout for ${table}:`, err);
+    console.error(`Insert timeout/error for ${table}:`, err);
     return null;
   }
 }
@@ -134,8 +157,13 @@ export function getCachedAllForTopIssues() {
   let hasAny = false;
   categories.forEach((cat) => {
     const cached = getCache(cat);
-    results[cat] = cached || [];
-    if (cached && cached.length > 0) hasAny = true;
+    if (cached && cached.length > 0) {
+      results[cat] = cached;
+      hasAny = true;
+    } else {
+      results[cat] = getSeedData(cat);
+      if (results[cat].length > 0) hasAny = true;
+    }
   });
   return hasAny ? results : null;
 }
