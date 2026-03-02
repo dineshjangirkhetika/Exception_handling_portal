@@ -11,35 +11,53 @@ A centralized digital system for capturing, tracking, prioritizing, and resolvin
 ## Architecture
 
 ```
-+-------------------+       +-------------------+       +------------------+
-|   Android Apps    |       |  React Dashboard  |       |   Backend API    |
-| (Picker/Driver)   | ----> |   (Web Portal)    | ----> |   (REST APIs)    |
-+-------------------+       +-------------------+       +------------------+
++-------------------+       +-------------------+       +-------------------------+
+|   Android Apps    |       |  React Dashboard  |       |   Supabase Backend      |
+| (Picker/Driver)   | ----> |   (Web Portal)    | ----> |   (PostgreSQL + REST)   |
++-------------------+       +-------------------+       +-------------------------+
                                                               |
                                                               v
-                                                        +------------------+
-                                                        |    Database      |
-                                                        | (qc_failures,    |
-                                                        |  stock_mismatch, |
-                                                        |  dispatch_logs,  |
-                                                        |  route_issues)   |
-                                                        +------------------+
+                                                        +-------------------------+
+                                                        |    PostgreSQL Database   |
+                                                        | - qc_failures            |
+                                                        | - stock_mismatch         |
+                                                        | - dispatch_support_logs  |
+                                                        | - route_issues           |
+                                                        | - operation_errors       |
+                                                        +-------------------------+
                                                               |
                                                               v
-                                                        +------------------+
-                                                        |  Notification    |
-                                                        |  Engine (FCM)    |
-                                                        +------------------+
+                                                        +-------------------------+
+                                                        |  Notification Engine    |
+                                                        |  (FCM)                  |
+                                                        +-------------------------+
 ```
 
 ## Tech Stack
 
 - **Frontend:** React 19, JavaScript, CSS
-- **Backend:** REST API
-- **Database:** Relational DB (qc_failures, stock_mismatch, dispatch_support_logs, route_issues tables)
-- **Cloud/Infra:** --
+- **Backend:** Supabase (auto-generated REST API)
+- **Database:** PostgreSQL (hosted on Supabase)
+- **Cloud/Infra:** GitHub Pages (frontend), Supabase Cloud (database)
 - **Notifications:** Firebase Cloud Messaging (FCM)
 - **Mobile:** Android (Picker App, Driver App)
+
+## Database
+
+The application uses a **Supabase PostgreSQL** database with 5 tables:
+
+| Table | Records | Description |
+|-------|---------|-------------|
+| `qc_failures` | 7+ | QC failure tracking with item details, reasons, and actions |
+| `stock_mismatch` | 5+ | Stock inventory discrepancy alerts |
+| `dispatch_support_logs` | 5+ | Dispatch and operational issue logs |
+| `route_issues` | 5+ | Route delay and incident reports |
+| `operation_errors` | 5+ | General operational and system errors |
+
+**View/Manage Database Tables:**
+[Supabase Dashboard - Table Editor](https://supabase.com/dashboard/project/twaohpngrwurqxlswfjv/editor)
+
+**Supabase Project URL:** `https://twaohpngrwurqxlswfjv.supabase.co`
 
 ## Features
 
@@ -50,13 +68,17 @@ A centralized digital system for capturing, tracking, prioritizing, and resolvin
 - **Top 10 Daily Issues Engine** -- Automated ranking of most critical operational issues using scoring formula: `Score = (Today Count x 2) + Last 7 Days Repeat Count`
 - **Notification & Escalation Engine** -- Real-time push notifications via FCM on exception creation, status changes, and escalations
 - **Daily Exception Dashboard** -- Centralized view highlighting top issues with trends for proactive resolution
+- **Add Sample Entry** -- One-click addition of random sample entries to any category for demo/testing purposes
 
 ## Setup Instructions
 
-1. Clone the repository
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/dineshjangirkhetika/Exception_handling_portal.git
+   ```
 2. Navigate to the dashboard directory:
    ```bash
-   cd dashboard
+   cd Exception_handling_portal/dashboard
    ```
 3. Install dependencies:
    ```bash

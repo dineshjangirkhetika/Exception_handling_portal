@@ -1,11 +1,5 @@
-import React, { useState } from "react";
-import {
-  qcFailures,
-  stockMismatch,
-  dispatchLogs,
-  routeIssues,
-  operationErrors
-} from "../data";
+import React, { useState, useEffect, useCallback } from "react";
+import { fetchRecords, updateRecordStatus, insertRecord } from "../supabaseClient";
 import StatusBadge from "./StatusBadge";
 import Toast from "./Toast";
 
@@ -113,6 +107,120 @@ const CATEGORY_CONFIG = {
   }
 };
 
+// Sample data generators for each category
+const SAMPLE_GENERATORS = {
+  QC_FAILURE: () => {
+    const items = [
+      { id: "1004784602", name: "Tomato 1kg", brand: "FreshFarm" },
+      { id: "1004784700", name: "Potato 5kg", brand: "AgroBest" },
+      { id: "1004784521", name: "Basmati Rice 26kg", brand: "Khetika" },
+      { id: "1004784800", name: "Onion 2kg", brand: "LocalFresh" },
+      { id: "1004784523", name: "Sugar 50kg", brand: "Khetika" }
+    ];
+    const reasons = ["Damaged packaging", "Short expiry", "Weight mismatch", "QUALITY_ISSUE", "EXPIRED"];
+    const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    const item = items[Math.floor(Math.random() * items.length)];
+    return {
+      item_id: item.id,
+      item_name: item.name,
+      item_brand: item.brand,
+      qr_id: `QR-${Math.floor(Math.random() * 9000) + 1000}`,
+      batch_id: `BATCH-${Math.floor(Math.random() * 100)}`,
+      expiry_date: "2026-06-30",
+      variety: ["HYBRID", "PREMIUM", "STANDARD", "BAG"][Math.floor(Math.random() * 4)],
+      qty: Math.floor(Math.random() * 10) + 1,
+      reason: reasons[Math.floor(Math.random() * reasons.length)],
+      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
+      created_by: `picker_${Math.floor(Math.random() * 10) + 1}`,
+      phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      notify_phone: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      status: "OPEN",
+      action_type: "",
+      status_updated_by: ""
+    };
+  },
+  STOCK_MISMATCH: () => {
+    const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    const scenarios = ["SYSTEM_QTY_MORE_THAN_PHYSICAL", "SYSTEM_QTY_LESS_THAN_PHYSICAL", "PHYSICAL_QTY_ZERO"];
+    const actions = ["Cycle count required", "Update system inventory", "Block item for sale", "Verification required"];
+    return {
+      item_id: `10047846${Math.floor(Math.random() * 900) + 100}`,
+      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
+      created_by: Math.random() > 0.5 ? "system" : `allocator_${Math.floor(Math.random() * 5) + 1}`,
+      phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      notify_phone: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      status: "OPEN",
+      scenario: scenarios[Math.floor(Math.random() * scenarios.length)],
+      action_required: actions[Math.floor(Math.random() * actions.length)]
+    };
+  },
+  DISPATCH_LOGS: () => {
+    const categories = ["DAMAGED_IN_TRANSIT", "MISSING_ITEM", "DELAYED_PICKUP"];
+    const descriptions = [
+      "Crates toppled during loading",
+      "Item not found during dispatch",
+      "Vehicle arrived late at dock",
+      "Bags torn during transit",
+      "Short delivery reported"
+    ];
+    const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    return {
+      issue_category: categories[Math.floor(Math.random() * categories.length)],
+      order_id: `ORD-${Math.floor(Math.random() * 90000) + 10000}`,
+      route_id: `ROUTE-${String(Math.floor(Math.random() * 10) + 1).padStart(2, "0")}`,
+      item_id: `10047847${Math.floor(Math.random() * 100)}`,
+      description: descriptions[Math.floor(Math.random() * descriptions.length)],
+      photo_url: "",
+      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
+      created_by: `ops_${Math.floor(Math.random() * 10) + 1}`,
+      phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      status: "OPEN"
+    };
+  },
+  ROUTE_ISSUES: () => {
+    const issueTypes = ["BREAKDOWN", "TRAFFIC_JAM", "WRONG_ADDRESS"];
+    const descriptions = [
+      "Vehicle puncture on highway",
+      "Heavy congestion near toll plaza",
+      "Customer address not reachable",
+      "Engine overheating",
+      "Road blocked due to accident"
+    ];
+    return {
+      route_id: `ROUTE-${String(Math.floor(Math.random() * 10) + 1).padStart(2, "0")}`,
+      driver_id: `DRV-${String(Math.floor(Math.random() * 10) + 1).padStart(3, "0")}`,
+      issue_type: issueTypes[Math.floor(Math.random() * issueTypes.length)],
+      description: descriptions[Math.floor(Math.random() * descriptions.length)],
+      latitude: 19 + Math.random(),
+      longitude: 72 + Math.random(),
+      photo_url: "",
+      need_help: Math.random() > 0.5,
+      created_by: `driver_${Math.floor(Math.random() * 10) + 1}`,
+      phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      status: "OPEN"
+    };
+  },
+  OPERATION_ERRORS: () => {
+    const descriptions = [
+      "Picking delay in outbound staging area",
+      "Invoice printing system not working",
+      "Handheld sync delay causing order visibility issues",
+      "Barcode scanner malfunction",
+      "Cold storage temperature alert",
+      "Conveyor belt jam in packing zone",
+      "Label printer offline at dispatch counter"
+    ];
+    const warehouses = ["DHANSAR", "TALOJA", "DELHI"];
+    return {
+      description: descriptions[Math.floor(Math.random() * descriptions.length)],
+      warehouse: warehouses[Math.floor(Math.random() * warehouses.length)],
+      created_by: ["system", "ops_team", "sre_team"][Math.floor(Math.random() * 3)],
+      phone_number: `99999${Math.floor(Math.random() * 90000) + 10000}`,
+      status: "OPEN"
+    };
+  }
+};
+
 function buildNotificationMessage(category, previousStatus, record, newStatus) {
   if (category === "QC_FAILURE") {
     if (!previousStatus) {
@@ -170,55 +278,69 @@ function buildNotificationMessage(category, previousStatus, record, newStatus) {
 
 export default function CategoryScreen({ category, onBack }) {
   const [toast, setToast] = useState(null);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
   const todayISO = new Date().toISOString().slice(0, 10);
   const [selectedDate, setSelectedDate] = useState(todayISO);
-
-  const dataMap = {
-    QC_FAILURE: qcFailures,
-    STOCK_MISMATCH: stockMismatch,
-    DISPATCH_LOGS: dispatchLogs,
-    ROUTE_ISSUES: routeIssues,
-    OPERATION_ERRORS: operationErrors
-  };
 
   const config = CATEGORY_CONFIG[category] || {
     label: category.replace("_", " "),
     statusOptions: ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
-    columns: Object.keys((dataMap[category] && dataMap[category][0]) || {})
+    columns: []
   };
 
-  const initialRecords = (dataMap[category] || []).slice().sort(
-    (a, b) => new Date(b.created_at) - new Date(a.created_at)
-  );
+  const loadRecords = useCallback(async () => {
+    setLoading(true);
+    const data = await fetchRecords(category);
+    setRecords(data);
+    setLoading(false);
+  }, [category]);
 
-  const [records, setRecords] = useState(initialRecords);
+  useEffect(() => {
+    loadRecords();
+  }, [loadRecords]);
 
   const handleRefresh = () => {
     setSelectedDate(todayISO);
+    loadRecords();
   };
 
-  const updateStatus = (id, newStatus) => {
+  const handleAddEntry = async () => {
+    const generator = SAMPLE_GENERATORS[category];
+    if (!generator) return;
+
+    setAdding(true);
+    const sampleRecord = generator();
+    const result = await insertRecord(category, sampleRecord);
+
+    if (result) {
+      setToast("New entry added successfully!");
+      setTimeout(() => setToast(null), 3500);
+      await loadRecords();
+    } else {
+      setToast("Failed to add entry. Please try again.");
+      setTimeout(() => setToast(null), 3500);
+    }
+    setAdding(false);
+  };
+
+  const updateStatus = async (id, newStatus) => {
     const existing = records.find(r => r.id === id);
     if (!existing) return;
 
-    const updatedRecord = {
-      ...existing,
-      status: newStatus,
-      status_updated_at: new Date().toISOString()
-    };
-
-    const updated = records.map(r => (r.id === id ? updatedRecord : r));
-    setRecords(updated);
-
-    const message = buildNotificationMessage(
-      category,
-      existing.status,
-      updatedRecord,
-      newStatus
-    );
-
-    setToast(message);
-    setTimeout(() => setToast(null), 3500);
+    const success = await updateRecordStatus(category, id, newStatus);
+    if (success) {
+      const message = buildNotificationMessage(
+        category,
+        existing.status,
+        existing,
+        newStatus
+      );
+      setToast(message);
+      setTimeout(() => setToast(null), 3500);
+      await loadRecords();
+    }
   };
 
   const filteredRecords = records.filter(r => {
@@ -247,8 +369,15 @@ export default function CategoryScreen({ category, onBack }) {
       </div>
 
       <div className="category-toolbar">
-        <button className="toolbar-button" onClick={handleRefresh}>
-          ⟳ Refresh
+        <button className="toolbar-button" onClick={handleRefresh} disabled={loading}>
+          {loading ? "⟳ Loading..." : "⟳ Refresh"}
+        </button>
+        <button
+          className="toolbar-button primary"
+          onClick={handleAddEntry}
+          disabled={adding}
+        >
+          {adding ? "+ Adding..." : "+ Add Sample Entry"}
         </button>
       </div>
 
@@ -267,63 +396,69 @@ export default function CategoryScreen({ category, onBack }) {
         </label>
       </div>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            {visibleColumns.map(key => (
-              <th key={key}>{key}</th>
-            ))}
-            <th>Update Status</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {filteredRecords.length === 0 && (
+      {loading ? (
+        <p style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+          Loading data from database...
+        </p>
+      ) : (
+        <table className="data-table">
+          <thead>
             <tr>
-              <td colSpan={visibleColumns.length + 1}>
-                No records found for selected date
-              </td>
+              {visibleColumns.map(key => (
+                <th key={key}>{key}</th>
+              ))}
+              <th>Update Status</th>
             </tr>
-          )}
+          </thead>
 
-          {filteredRecords.map(record => (
-            <tr key={record.id}>
-              {visibleColumns.map(col => {
-                const value = record[col];
+          <tbody>
+            {filteredRecords.length === 0 && (
+              <tr>
+                <td colSpan={visibleColumns.length + 1}>
+                  No records found for selected date
+                </td>
+              </tr>
+            )}
 
-                if (col === "status") {
+            {filteredRecords.map(record => (
+              <tr key={record.id}>
+                {visibleColumns.map(col => {
+                  const value = record[col];
+
+                  if (col === "status") {
+                    return (
+                      <td key={col}>
+                        <StatusBadge status={value} />
+                      </td>
+                    );
+                  }
+
                   return (
                     <td key={col}>
-                      <StatusBadge status={value} />
+                      {value !== undefined && value !== null
+                        ? value.toString()
+                        : ""}
                     </td>
                   );
-                }
+                })}
 
-                return (
-                  <td key={col}>
-                    {value !== undefined && value !== null
-                      ? value.toString()
-                      : ""}
-                  </td>
-                );
-              })}
-
-              <td>
-                <select
-                  value={record.status}
-                  onChange={e => updateStatus(record.id, e.target.value)}
-                >
-                  {config.statusOptions.map(status => (
-                    <option key={status} value={status}>
-                      {status}
-                    </option>
-                  ))}
-                </select>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <td>
+                  <select
+                    value={record.status}
+                    onChange={e => updateStatus(record.id, e.target.value)}
+                  >
+                    {config.statusOptions.map(status => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       {toast && <Toast message={toast} />}
     </div>

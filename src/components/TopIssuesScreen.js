@@ -1,33 +1,47 @@
-import React, { useMemo, useState } from "react";
-import data from "../data";
-
-const {
-  qcFailures,
-  stockMismatch,
-  dispatchLogs,
-  routeIssues,
-  operationErrors
-} = data;
-
-// Derive a "today" reference from the latest created_at
-// in the data so that sample data always has active issues.
-const allCreatedAt = [
-  ...qcFailures,
-  ...stockMismatch,
-  ...dispatchLogs,
-  ...routeIssues,
-  ...operationErrors
-].map(r => new Date(r.created_at));
-
-const latestDate =
-  allCreatedAt.length > 0
-    ? new Date(Math.max(...allCreatedAt.map(d => d.getTime())))
-    : new Date();
-
-const TODAY_REF = latestDate.toISOString().slice(0, 10);
+import React, { useMemo, useState, useEffect } from "react";
+import { fetchAllForTopIssues } from "../supabaseClient";
 
 export default function TopIssuesScreen({ onBack }) {
-  const rows = useMemo(() => {
+  const [allData, setAllData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [focusTop3, setFocusTop3] = useState(false);
+
+  const loadData = async () => {
+    setLoading(true);
+    const results = await fetchAllForTopIssues();
+    setAllData(results);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const { rows, today } = useMemo(() => {
+    if (!allData) return { rows: [], today: new Date().toISOString().slice(0, 10) };
+
+    const qcFailures = allData.QC_FAILURE || [];
+    const stockMismatch = allData.STOCK_MISMATCH || [];
+    const dispatchLogs = allData.DISPATCH_LOGS || [];
+    const routeIssues = allData.ROUTE_ISSUES || [];
+    const operationErrors = allData.OPERATION_ERRORS || [];
+
+    // Derive "today" from the latest created_at
+    const allCreatedAt = [
+      ...qcFailures,
+      ...stockMismatch,
+      ...dispatchLogs,
+      ...routeIssues,
+      ...operationErrors
+    ].map(r => new Date(r.created_at));
+
+    const latestDate =
+      allCreatedAt.length > 0
+        ? new Date(Math.max(...allCreatedAt.map(d => d.getTime())))
+        : new Date();
+
+    const TODAY_REF = latestDate.toISOString().slice(0, 10);
+
     const isToday = dateStr => dateStr && dateStr.startsWith(TODAY_REF);
 
     const isWithinLast7Days = dateStr => {
@@ -40,8 +54,6 @@ export default function TopIssuesScreen({ onBack }) {
     };
 
     const all = [];
-
-    // ========== DATA SOURCES (LOCAL ENGINE) ==========
 
     qcFailures.forEach(r => {
       all.push({
@@ -88,8 +100,7 @@ export default function TopIssuesScreen({ onBack }) {
       });
     });
 
-    // ========== GROUPING: exception_type + reference_id + warehouse ==========
-
+    // Grouping
     const grouped = new Map();
 
     all.forEach(item => {
@@ -116,14 +127,11 @@ export default function TopIssuesScreen({ onBack }) {
       }
     });
 
-    // ========== SCORING: Score = (Today × 2) + Last 7 Days ==========
-
+    // Scoring
     const scored = Array.from(grouped.values()).map(item => ({
       ...item,
       score: item.today_count * 2 + item.repeat_count
     }));
-
-    // ========== SORTING & TOP 10 ==========
 
     const sorted = scored
       .filter(item => item.score > 0)
@@ -134,14 +142,11 @@ export default function TopIssuesScreen({ onBack }) {
         ...item
       }));
 
-    return sorted;
-  }, []);
-
-  const today = TODAY_REF;
-  const [focusTop3, setFocusTop3] = useState(false);
+    return { rows: sorted, today: TODAY_REF };
+  }, [allData]);
 
   const handleRefresh = () => {
-    // Derived from static data; no-op for now but wired for future API.
+    loadData();
   };
 
   const toggleFocusTop3 = () => {
@@ -169,8 +174,8 @@ export default function TopIssuesScreen({ onBack }) {
           <span>Insights tools</span>
         </div>
         <div className="category-toolbar-right">
-          <button className="toolbar-button" type="button" onClick={handleRefresh}>
-            ⟳ Refresh
+          <button className="toolbar-button" type="button" onClick={handleRefresh} disabled={loading}>
+            {loading ? "⟳ Loading..." : "⟳ Refresh"}
           </button>
           <button
             className="toolbar-button primary"
@@ -194,35 +199,40 @@ export default function TopIssuesScreen({ onBack }) {
         </span>
       </p>
 
-      <table className="data-table">
-        <thead>
-          <tr>
-            <th>Rank</th>
-            <th>Exception Type</th>
-            <th>Reference ID</th>
-            <th>Warehouse / Route</th>
-            <th>Today</th>
-            <th>7 Day Repeat</th>
-            <th>Score</th>
-          </tr>
-        </thead>
-        <tbody>
-          {visibleRows.map((row, index) => (
-            <tr key={index}>
-              <td>{row.rank}</td>
-              <td>{row.exception_type}</td>
-              <td>{row.reference_id}</td>
-              <td>{row.warehouse}</td>
-              <td>{row.today_count}</td>
-              <td>{row.repeat_count}</td>
-              <td>
-                <strong>{row.score}</strong>
-              </td>
+      {loading ? (
+        <p style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+          Loading data from database...
+        </p>
+      ) : (
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Exception Type</th>
+              <th>Reference ID</th>
+              <th>Warehouse / Route</th>
+              <th>Today</th>
+              <th>7 Day Repeat</th>
+              <th>Score</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visibleRows.map((row, index) => (
+              <tr key={index}>
+                <td>{row.rank}</td>
+                <td>{row.exception_type}</td>
+                <td>{row.reference_id}</td>
+                <td>{row.warehouse}</td>
+                <td>{row.today_count}</td>
+                <td>{row.repeat_count}</td>
+                <td>
+                  <strong>{row.score}</strong>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }
-
