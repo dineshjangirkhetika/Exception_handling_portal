@@ -5,7 +5,10 @@ export default function StatusBadge({ status }) {
     OPEN: "red",
     IN_PROGRESS: "orange",
     RESOLVED: "green",
-    CLOSED: "gray"
+    CLOSED: "gray",
+    DUMPED: "orange",
+    REPACKING: "blue",
+    FUMIGATION: "purple"
   };
 
   return (

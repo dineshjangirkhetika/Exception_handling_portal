@@ -8,7 +8,7 @@ const CATEGORY_CONFIG = {
     label: "QC Failures",
     description:
       "Track and resolve product quality issues detected during picking, with full visibility of repacking and disposal actions.",
-    statusOptions: ["OPEN", "ACTION_TAKEN", "CLOSED"],
+    statusOptions: ["OPEN", "DUMPED", "REPACKING", "FUMIGATION", "CLOSED"],
     columns: [
       "id",
       "date",
@@ -26,7 +26,6 @@ const CATEGORY_CONFIG = {
       "phone_number",
       "notify_phone",
       "status",
-      "action_type",
       "status_updated_by",
       "created_at",
       "status_updated_at"
@@ -237,58 +236,8 @@ const SAMPLE_GENERATORS = {
 };
 
 function buildNotificationMessage(category, previousStatus, record, newStatus) {
-  if (category === "QC_FAILURE") {
-    if (!previousStatus) {
-      return `QC failure logged. Notifying allocator at ${record.notify_phone}.`;
-    }
-    if (previousStatus === "OPEN" && newStatus === "ACTION_TAKEN") {
-      return `QC status set to ACTION_TAKEN. Notifying picker at ${record.phone_number}.`;
-    }
-    if (newStatus === "CLOSED") {
-      return `QC case closed. Notifying allocator at ${record.notify_phone}.`;
-    }
-  }
-
-  if (category === "STOCK_MISMATCH") {
-    if (!previousStatus) {
-      return `Stock mismatch created. Notifying allocator at ${record.notify_phone}.`;
-    }
-    if (newStatus === "VERIFIED") {
-      return `Stock mismatch verified. Notifying picker at ${record.phone_number}.`;
-    }
-    if (newStatus === "RESOLVED") {
-      return `Inventory updated. Notifying picker at ${record.phone_number}.`;
-    }
-  }
-
-  if (category === "DISPATCH_LOGS") {
-    if (!previousStatus) {
-      return `Dispatch issue logged. Notifying operations team.`;
-    }
-    if (newStatus === "IN_PROGRESS") {
-      return `Issue under investigation. Notifying reporter at ${record.phone_number}.`;
-    }
-    if (newStatus === "RESOLVED") {
-      return `Issue resolved. Notifying reporter at ${record.phone_number}.`;
-    }
-    if (newStatus === "CLOSED") {
-      return `Issue closed. Confirmation sent to ${record.phone_number}.`;
-    }
-  }
-
-  if (category === "ROUTE_ISSUES") {
-    if (!previousStatus) {
-      return `Route issue reported. Alerting transport team.`;
-    }
-    if (newStatus === "SUPPORT_SENT") {
-      return `Support dispatched. Notifying driver at ${record.phone_number}.`;
-    }
-    if (newStatus === "RESOLVED") {
-      return `Route issue resolved.`;
-    }
-  }
-
-  return "Status updated. Notification sent.";
+  const creator = record.created_by || "creator";
+  return `Status updated to ${newStatus} successfully! Notification sent to ${creator}.`;
 }
 
 // Helper: get today in D-M-YYYY (no leading zeros)
@@ -355,18 +304,22 @@ export default function CategoryScreen({ category, onBack }) {
     const existing = records.find(r => r.id === id);
     if (!existing) return;
 
-    const success = await updateRecordStatus(category, id, newStatus);
-    if (success) {
-      const message = buildNotificationMessage(
-        category,
-        existing.status,
-        existing,
-        newStatus
-      );
-      setToast(message);
-      setTimeout(() => setToast(null), 3500);
-      await loadRecords();
-    }
+    // Update status in UI immediately
+    setRecords(prev =>
+      prev.map(r => (r.id === id ? { ...r, status: newStatus } : r))
+    );
+
+    const message = buildNotificationMessage(
+      category,
+      existing.status,
+      existing,
+      newStatus
+    );
+    setToast(message);
+    setTimeout(() => setToast(null), 3500);
+
+    // Sync with database in background
+    await updateRecordStatus(category, id, newStatus);
   };
 
   const filteredRecords = records.filter(r => {
@@ -457,63 +410,65 @@ export default function CategoryScreen({ category, onBack }) {
           Loading data from database...
         </p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              {visibleColumns.map(key => (
-                <th key={key}>{key}</th>
-              ))}
-              <th>Update Status</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {filteredRecords.length === 0 && (
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
               <tr>
-                <td colSpan={visibleColumns.length + 1}>
-                  No records found for selected date
-                </td>
+                {visibleColumns.map(key => (
+                  <th key={key}>{key.replace(/_/g, " ")}</th>
+                ))}
+                <th>Update Status</th>
               </tr>
-            )}
+            </thead>
 
-            {filteredRecords.map(record => (
-              <tr key={record.id}>
-                {visibleColumns.map(col => {
-                  const value = record[col];
+            <tbody>
+              {filteredRecords.length === 0 && (
+                <tr>
+                  <td colSpan={visibleColumns.length + 1} style={{ textAlign: "center", color: "#94a3b8" }}>
+                    No records found for selected date
+                  </td>
+                </tr>
+              )}
 
-                  if (col === "status") {
+              {filteredRecords.map(record => (
+                <tr key={record.id}>
+                  {visibleColumns.map(col => {
+                    const value = record[col];
+
+                    if (col === "status") {
+                      return (
+                        <td key={col}>
+                          <StatusBadge status={value} />
+                        </td>
+                      );
+                    }
+
                     return (
                       <td key={col}>
-                        <StatusBadge status={value} />
+                        {value !== undefined && value !== null
+                          ? value.toString()
+                          : ""}
                       </td>
                     );
-                  }
+                  })}
 
-                  return (
-                    <td key={col}>
-                      {value !== undefined && value !== null
-                        ? value.toString()
-                        : ""}
-                    </td>
-                  );
-                })}
-
-                <td>
-                  <select
-                    value={record.status}
-                    onChange={e => updateStatus(record.id, e.target.value)}
-                  >
-                    {config.statusOptions.map(status => (
-                      <option key={status} value={status}>
-                        {status}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  <td>
+                    <select
+                      value={record.status}
+                      onChange={e => updateStatus(record.id, e.target.value)}
+                    >
+                      {config.statusOptions.map(status => (
+                        <option key={status} value={status}>
+                          {status}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {toast && <Toast message={toast} />}

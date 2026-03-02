@@ -209,34 +209,36 @@ export default function TopIssuesScreen({ onBack }) {
           Loading data from database...
         </p>
       ) : (
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Exception Type</th>
-              <th>Reference ID</th>
-              <th>Warehouse / Route</th>
-              <th>Today</th>
-              <th>7 Day Repeat</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibleRows.map((row, index) => (
-              <tr key={index}>
-                <td>{row.rank}</td>
-                <td>{row.exception_type}</td>
-                <td>{row.reference_id}</td>
-                <td>{row.warehouse}</td>
-                <td>{row.today_count}</td>
-                <td>{row.repeat_count}</td>
-                <td>
-                  <strong>{row.score}</strong>
-                </td>
+        <div className="table-wrapper">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Rank</th>
+                <th>Exception Type</th>
+                <th>Reference ID</th>
+                <th>Warehouse / Route</th>
+                <th>Today</th>
+                <th>7 Day Repeat</th>
+                <th>Score</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {visibleRows.map((row, index) => (
+                <tr key={index}>
+                  <td>{row.rank}</td>
+                  <td>{row.exception_type}</td>
+                  <td>{row.reference_id}</td>
+                  <td>{row.warehouse}</td>
+                  <td>{row.today_count}</td>
+                  <td>{row.repeat_count}</td>
+                  <td>
+                    <strong>{row.score}</strong>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </div>
   );
