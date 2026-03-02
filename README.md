@@ -371,9 +371,11 @@ Exception_handling_portal/
     README.md
 ```
 
-## Demo Video
+## Demo
 
-_Link to demo video_
+![Exception Management System Demo](demo.gif)
+
+**Demo walkthrough:** Dashboard Home → QC Failures → Stock Mismatch → Dispatch Errors → Route Issues → Operation Errors → Daily Top 10 (Full + Focus Top 3) → Add Sample Entry
 
 ## Live Demo
 
