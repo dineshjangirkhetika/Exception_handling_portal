@@ -11,6 +11,7 @@ const CATEGORY_CONFIG = {
     statusOptions: ["OPEN", "ACTION_TAKEN", "CLOSED"],
     columns: [
       "id",
+      "date",
       "item_id",
       "item_name",
       "item_brand",
@@ -38,6 +39,7 @@ const CATEGORY_CONFIG = {
     statusOptions: ["OPEN", "VERIFIED", "RESOLVED"],
     columns: [
       "id",
+      "date",
       "item_id",
       "warehouse",
       "created_by",
@@ -56,6 +58,7 @@ const CATEGORY_CONFIG = {
     statusOptions: ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
     columns: [
       "id",
+      "date",
       "issue_category",
       "order_id",
       "route_id",
@@ -76,6 +79,7 @@ const CATEGORY_CONFIG = {
     statusOptions: ["OPEN", "SUPPORT_SENT", "RESOLVED"],
     columns: [
       "id",
+      "date",
       "route_id",
       "driver_id",
       "issue_type",
@@ -97,6 +101,7 @@ const CATEGORY_CONFIG = {
     statusOptions: ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
     columns: [
       "id",
+      "date",
       "description",
       "warehouse",
       "created_by",
@@ -276,14 +281,21 @@ function buildNotificationMessage(category, previousStatus, record, newStatus) {
   return "Status updated. Notification sent.";
 }
 
+// Helper: get today in DD-MM-YYYY
+function getTodayDMY() {
+  const d = new Date();
+  const day = String(d.getDate()).padStart(2, "0");
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  return `${day}-${m}-${d.getFullYear()}`;
+}
+
 export default function CategoryScreen({ category, onBack }) {
   const [toast, setToast] = useState(null);
-  const cached = getCachedRecords(category);
-  const [records, setRecords] = useState(cached);
-  const [loading, setLoading] = useState(cached.length === 0);
+  const [records, setRecords] = useState(() => getCachedRecords(category));
+  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(getTodayDMY());
 
   const config = CATEGORY_CONFIG[category] || {
     label: category.replace("_", " "),
@@ -291,22 +303,20 @@ export default function CategoryScreen({ category, onBack }) {
     columns: []
   };
 
-  const loadRecords = useCallback(async (isRefresh = false) => {
-    if (isRefresh) setRefreshing(true);
-    else if (records.length === 0) setLoading(true);
+  const loadRecords = useCallback(async () => {
     const data = await fetchRecords(category);
     if (data.length > 0) setRecords(data);
     setLoading(false);
     setRefreshing(false);
-  }, [category, records.length]);
+  }, [category]);
 
   useEffect(() => {
     loadRecords();
   }, [loadRecords]);
 
   const handleRefresh = () => {
-    setSelectedDate("");
-    loadRecords(true);
+    setRefreshing(true);
+    loadRecords();
   };
 
   const handleAddEntry = async () => {
@@ -315,16 +325,19 @@ export default function CategoryScreen({ category, onBack }) {
 
     setAdding(true);
     const sampleRecord = generator();
-    const result = await insertRecord(category, sampleRecord);
-
-    if (result) {
-      setToast("New entry added successfully!");
-      setTimeout(() => setToast(null), 3500);
-      await loadRecords();
-    } else {
-      setToast("Failed to add entry. Please try again.");
-      setTimeout(() => setToast(null), 3500);
+    try {
+      const result = await insertRecord(category, sampleRecord);
+      if (result) {
+        setToast("New entry added successfully!");
+        setSelectedDate(getTodayDMY());
+        await loadRecords();
+      } else {
+        setToast("Failed to add entry. Please try again.");
+      }
+    } catch {
+      setToast("Network error. Please try again.");
     }
+    setTimeout(() => setToast(null), 3500);
     setAdding(false);
   };
 
@@ -348,14 +361,8 @@ export default function CategoryScreen({ category, onBack }) {
 
   const filteredRecords = records.filter(r => {
     if (!selectedDate) return true;
-    if (!r.created_at) return false;
-    // Parse the timestamp and compare using local date
-    const d = new Date(r.created_at);
-    if (isNaN(d.getTime())) return false;
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}` === selectedDate;
+    // Use the date column (DD-MM-YYYY) from DB for filtering
+    return r.date === selectedDate;
   });
 
   const visibleColumns =
@@ -400,13 +407,22 @@ export default function CategoryScreen({ category, onBack }) {
 
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <label>
-            Date:
+            Date (DD-MM-YYYY):
             <input
-              type="date"
+              type="text"
+              placeholder="DD-MM-YYYY"
               value={selectedDate}
               onChange={e => setSelectedDate(e.target.value)}
+              style={{ width: "120px", marginLeft: "6px", padding: "4px 8px" }}
             />
           </label>
+          <button
+            className="toolbar-button"
+            onClick={() => setSelectedDate(getTodayDMY())}
+            style={{ padding: "4px 10px", fontSize: "0.85rem" }}
+          >
+            Today
+          </button>
           {selectedDate && (
             <button
               className="toolbar-button"
