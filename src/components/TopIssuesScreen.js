@@ -1,20 +1,25 @@
 import React, { useMemo, useState, useEffect } from "react";
-import { fetchAllForTopIssues } from "../supabaseClient";
+import { fetchAllForTopIssues, getCachedAllForTopIssues } from "../supabaseClient";
 
 export default function TopIssuesScreen({ onBack }) {
-  const [allData, setAllData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const cachedData = getCachedAllForTopIssues();
+  const [allData, setAllData] = useState(cachedData);
+  const [loading, setLoading] = useState(!cachedData);
+  const [refreshing, setRefreshing] = useState(false);
   const [focusTop3, setFocusTop3] = useState(false);
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else if (!allData) setLoading(true);
     const results = await fetchAllForTopIssues();
     setAllData(results);
     setLoading(false);
+    setRefreshing(false);
   };
 
   useEffect(() => {
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const { rows, today } = useMemo(() => {
@@ -146,7 +151,7 @@ export default function TopIssuesScreen({ onBack }) {
   }, [allData]);
 
   const handleRefresh = () => {
-    loadData();
+    loadData(true);
   };
 
   const toggleFocusTop3 = () => {
@@ -174,8 +179,8 @@ export default function TopIssuesScreen({ onBack }) {
           <span>Insights tools</span>
         </div>
         <div className="category-toolbar-right">
-          <button className="toolbar-button" type="button" onClick={handleRefresh} disabled={loading}>
-            {loading ? "⟳ Loading..." : "⟳ Refresh"}
+          <button className="toolbar-button" type="button" onClick={handleRefresh} disabled={refreshing}>
+            {refreshing ? "⟳ Syncing..." : "⟳ Refresh"}
           </button>
           <button
             className="toolbar-button primary"

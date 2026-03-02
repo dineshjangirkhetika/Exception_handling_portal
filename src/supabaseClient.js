@@ -6,7 +6,6 @@ const SUPABASE_ANON_KEY =
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Map category keys to Supabase table names
 const TABLE_MAP = {
   QC_FAILURE: "qc_failures",
   STOCK_MISMATCH: "stock_mismatch",
@@ -19,46 +18,101 @@ export function getTableName(category) {
   return TABLE_MAP[category] || category;
 }
 
+// --- Local cache helpers ---
+function getCacheKey(category) {
+  return `ems_cache_${category}`;
+}
+
+function getCache(category) {
+  try {
+    const raw = localStorage.getItem(getCacheKey(category));
+    if (!raw) return null;
+    const { data, ts } = JSON.parse(raw);
+    // Cache valid for 10 minutes
+    if (Date.now() - ts < 10 * 60 * 1000) return data;
+  } catch {}
+  return null;
+}
+
+function setCache(category, data) {
+  try {
+    localStorage.setItem(
+      getCacheKey(category),
+      JSON.stringify({ data, ts: Date.now() })
+    );
+  } catch {}
+}
+
+// --- Timeout wrapper ---
+function withTimeout(promise, ms = 8000) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error("timeout")), ms)
+    )
+  ]);
+}
+
+// --- Public API ---
+
+export function getCachedRecords(category) {
+  return getCache(category) || [];
+}
+
 export async function fetchRecords(category) {
   const table = getTableName(category);
-  const { data, error } = await supabase
-    .from(table)
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error(`Error fetching ${table}:`, error);
-    return [];
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from(table).select("*").order("created_at", { ascending: false })
+    );
+    if (error) {
+      console.error(`Error fetching ${table}:`, error);
+      return getCache(category) || [];
+    }
+    const records = data || [];
+    setCache(category, records);
+    return records;
+  } catch (err) {
+    console.error(`Fetch timeout/error for ${table}:`, err);
+    return getCache(category) || [];
   }
-  return data || [];
 }
 
 export async function updateRecordStatus(category, id, status) {
   const table = getTableName(category);
-  const { error } = await supabase
-    .from(table)
-    .update({ status, status_updated_at: new Date().toISOString() })
-    .eq("id", id);
-
-  if (error) {
-    console.error(`Error updating ${table}:`, error);
+  try {
+    const { error } = await withTimeout(
+      supabase
+        .from(table)
+        .update({ status, status_updated_at: new Date().toISOString() })
+        .eq("id", id)
+    );
+    if (error) {
+      console.error(`Error updating ${table}:`, error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error(`Update timeout for ${table}:`, err);
     return false;
   }
-  return true;
 }
 
 export async function insertRecord(category, record) {
   const table = getTableName(category);
-  const { data, error } = await supabase
-    .from(table)
-    .insert([record])
-    .select();
-
-  if (error) {
-    console.error(`Error inserting into ${table}:`, error);
+  try {
+    const { data, error } = await withTimeout(
+      supabase.from(table).insert([record]).select()
+    );
+    if (error) {
+      console.error(`Error inserting into ${table}:`, error);
+      return null;
+    }
+    return data?.[0] || null;
+  } catch (err) {
+    console.error(`Insert timeout for ${table}:`, err);
     return null;
   }
-  return data?.[0] || null;
 }
 
 export async function fetchAllForTopIssues() {
@@ -72,4 +126,16 @@ export async function fetchAllForTopIssues() {
   );
 
   return results;
+}
+
+export function getCachedAllForTopIssues() {
+  const categories = Object.keys(TABLE_MAP);
+  const results = {};
+  let hasAny = false;
+  categories.forEach((cat) => {
+    const cached = getCache(cat);
+    results[cat] = cached || [];
+    if (cached && cached.length > 0) hasAny = true;
+  });
+  return hasAny ? results : null;
 }

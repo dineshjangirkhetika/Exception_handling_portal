@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { fetchRecords, updateRecordStatus, insertRecord } from "../supabaseClient";
+import { fetchRecords, updateRecordStatus, insertRecord, getCachedRecords } from "../supabaseClient";
 import StatusBadge from "./StatusBadge";
 import Toast from "./Toast";
 
@@ -278,8 +278,10 @@ function buildNotificationMessage(category, previousStatus, record, newStatus) {
 
 export default function CategoryScreen({ category, onBack }) {
   const [toast, setToast] = useState(null);
-  const [records, setRecords] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const cached = getCachedRecords(category);
+  const [records, setRecords] = useState(cached);
+  const [loading, setLoading] = useState(cached.length === 0);
+  const [refreshing, setRefreshing] = useState(false);
   const [adding, setAdding] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
 
@@ -289,12 +291,14 @@ export default function CategoryScreen({ category, onBack }) {
     columns: []
   };
 
-  const loadRecords = useCallback(async () => {
-    setLoading(true);
+  const loadRecords = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true);
+    else if (records.length === 0) setLoading(true);
     const data = await fetchRecords(category);
-    setRecords(data);
+    if (data.length > 0) setRecords(data);
     setLoading(false);
-  }, [category]);
+    setRefreshing(false);
+  }, [category, records.length]);
 
   useEffect(() => {
     loadRecords();
@@ -302,7 +306,7 @@ export default function CategoryScreen({ category, onBack }) {
 
   const handleRefresh = () => {
     setSelectedDate("");
-    loadRecords();
+    loadRecords(true);
   };
 
   const handleAddEntry = async () => {
@@ -371,8 +375,8 @@ export default function CategoryScreen({ category, onBack }) {
       </div>
 
       <div className="category-toolbar">
-        <button className="toolbar-button" onClick={handleRefresh} disabled={loading}>
-          {loading ? "⟳ Loading..." : "⟳ Refresh"}
+        <button className="toolbar-button" onClick={handleRefresh} disabled={refreshing}>
+          {refreshing ? "⟳ Syncing..." : "⟳ Refresh"}
         </button>
         <button
           className="toolbar-button primary"
