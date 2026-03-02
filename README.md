@@ -360,6 +360,7 @@ Exception_handling_portal/
   dashboard/
     public/
       index.html            # HTML entry point
+      demo.gif              # Animated demo walkthrough
       manifest.json         # PWA manifest
     src/
       App.js                # Root component with navigation
@@ -372,6 +373,8 @@ Exception_handling_portal/
         TopIssuesScreen.js  # Daily Top 10 scoring engine with focus mode
         StatusBadge.js      # Color-coded status indicator component
         Toast.js            # Notification toast component
+    scripts/
+      record-demo.js        # Puppeteer script to record demo GIF
     package.json
     README.md
 ```
@@ -380,7 +383,24 @@ Exception_handling_portal/
 
 ![Exception Management System Demo](demo.gif)
 
-**Demo walkthrough:** Dashboard Home → QC Failures → Stock Mismatch → Dispatch Errors → Route Issues → Operation Errors → Daily Top 10 (Full + Focus Top 3) → Add Sample Entry
+**Demo walkthrough:**
+1. **Dashboard Home** -- All 6 category cards with simple descriptions
+2. **QC Failures** -- Items that failed quality check (17 records from SuperDisha app)
+3. **QC Failures - Today filter** -- Filter to see only today's records
+4. **Stock Mismatch** -- Stock count does not match system (11 records from SuperDisha app)
+5. **Dispatch Issues** -- Problems during picking, loading, or sending orders (12 records from SuperOps app)
+6. **Route Problems** -- Driver problems on the road like breakdowns, traffic (11 records from SuperOps app)
+7. **Operation Errors** -- Machine and system problems in warehouse (14 records from SuperOps app)
+8. **Daily Top 10** -- Today's biggest problems ranked by score
+9. **Focus Top 3** -- Quick view of the 3 most urgent issues
+
+**Total records:** 65+ across all categories from SuperDisha and SuperOps apps.
+
+**Re-record the demo GIF:**
+```bash
+npm start                        # Start the dashboard
+node scripts/record-demo.js      # Record new demo.gif
+```
 
 ## Live Demo
 
