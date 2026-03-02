@@ -1,70 +1,77 @@
-# Getting Started with Create React App
+# Exception Management System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Problem Statement
 
-## Available Scripts
+Operational exceptions such as QC failures, stock mismatches, dispatch errors, route delays, and picking/loading errors are currently tracked manually or not tracked at all. There is no prioritized daily view for management to monitor operational health, leading to repeat errors, slow resolution times, and limited visibility into warehouse and logistics performance.
 
-In the project directory, you can run:
+## Solution Overview
 
-### `npm start`
+A centralized digital system for capturing, tracking, prioritizing, and resolving operational exceptions across warehouse and logistics operations. The system provides real-time exception logging, lifecycle-based status tracking, automated daily Top 10 issue ranking, and push notifications on status changes. It enables warehouse ops, QC teams, logistics staff, and management to proactively identify and resolve critical issues through a unified dashboard.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## Architecture
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+```
++-------------------+       +-------------------+       +------------------+
+|   Android Apps    |       |  React Dashboard  |       |   Backend API    |
+| (Picker/Driver)   | ----> |   (Web Portal)    | ----> |   (REST APIs)    |
++-------------------+       +-------------------+       +------------------+
+                                                              |
+                                                              v
+                                                        +------------------+
+                                                        |    Database      |
+                                                        | (qc_failures,    |
+                                                        |  stock_mismatch, |
+                                                        |  dispatch_logs,  |
+                                                        |  route_issues)   |
+                                                        +------------------+
+                                                              |
+                                                              v
+                                                        +------------------+
+                                                        |  Notification    |
+                                                        |  Engine (FCM)    |
+                                                        +------------------+
+```
 
-### `npm test`
+## Tech Stack
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- **Frontend:** React 19, JavaScript, CSS
+- **Backend:** REST API
+- **Database:** Relational DB (qc_failures, stock_mismatch, dispatch_support_logs, route_issues tables)
+- **Cloud/Infra:** --
+- **Notifications:** Firebase Cloud Messaging (FCM)
+- **Mobile:** Android (Picker App, Driver App)
 
-### `npm run build`
+## Features
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+- **QC Failure Tracking** -- Record, monitor, and resolve product quality issues (damaged, expired, quality issues) with status lifecycle (OPEN -> ACTION_TAKEN -> CLOSED) and action types (DUMPED, REPACKING, FUMIGATION)
+- **Stock Mismatch Alerts** -- Detect and resolve inventory inconsistencies where physical stock exists but system shows zero, with status flow (OPEN -> VERIFIED -> RESOLVED)
+- **Dispatch Support & Operational Issue Alerts** -- Report and track picking, loading, dispatch, and route issues with optional photo uploads and status tracking (OPEN -> IN_PROGRESS -> RESOLVED -> CLOSED)
+- **Route Delay Monitoring** -- Drivers report route issues (breakdowns, traffic, accidents) with GPS location capture and help requests (OPEN -> SUPPORT_SENT -> RESOLVED)
+- **Top 10 Daily Issues Engine** -- Automated ranking of most critical operational issues using scoring formula: `Score = (Today Count x 2) + Last 7 Days Repeat Count`
+- **Notification & Escalation Engine** -- Real-time push notifications via FCM on exception creation, status changes, and escalations
+- **Daily Exception Dashboard** -- Centralized view highlighting top issues with trends for proactive resolution
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## Setup Instructions
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+1. Clone the repository
+2. Navigate to the dashboard directory:
+   ```bash
+   cd dashboard
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Start the development server:
+   ```bash
+   npm start
+   ```
+5. Open [http://localhost:3000](http://localhost:3000) in your browser
 
-### `npm run eject`
+## Demo Video
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+_Link to demo video_
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Live Demo
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+_Link to deployed app_
