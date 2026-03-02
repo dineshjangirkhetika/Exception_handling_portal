@@ -19,19 +19,19 @@ export function getTableName(category) {
   return TABLE_MAP[category] || category;
 }
 
-// --- Seed data fallback ---
+// --- Get sample data when database is down ---
 function getSeedData(category) {
   return SEED_DATA[category] || [];
 }
 
-// --- Local cache helpers ---
+// --- Save data on phone/browser for faster loading ---
 const CACHE_VERSION = "v3";
 
 function getCacheKey(category) {
   return `ems_${CACHE_VERSION}_${category}`;
 }
 
-// Clear old cache entries on load
+// Remove old saved data when app starts
 (function clearOldCache() {
   try {
     const keys = Object.keys(localStorage);
@@ -62,7 +62,7 @@ function setCache(category, data) {
   } catch {}
 }
 
-// --- Timeout wrapper ---
+// --- Stop waiting if database takes too long ---
 function withTimeout(promise, ms = 30000) {
   return Promise.race([
     promise,
@@ -72,7 +72,7 @@ function withTimeout(promise, ms = 30000) {
   ]);
 }
 
-// --- Public API ---
+// --- Functions used by the app ---
 
 export function getCachedRecords(category) {
   return getCache(category) || getSeedData(category);

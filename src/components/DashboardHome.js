@@ -5,7 +5,7 @@ export default function DashboardHome({ onSelect }) {
     {
       key: "QC_FAILURE",
       title: "QC Failures",
-      description: "Quality control failures and defects",
+      description: "Items that failed quality check",
       iconLabel: "QC",
       clickable: true,
       cardClass: "card--pink"
@@ -13,23 +13,23 @@ export default function DashboardHome({ onSelect }) {
     {
       key: "STOCK_MISMATCH",
       title: "Stock Mismatch",
-      description: "Inventory discrepancies",
+      description: "Stock count does not match system",
       iconLabel: "ST",
       clickable: true,
       cardClass: "card--beige"
     },
     {
       key: "DISPATCH_LOGS",
-      title: "Dispatch Errors",
-      description: "Shipping and dispatch issues",
+      title: "Dispatch Issues",
+      description: "Problems during packing and sending orders",
       iconLabel: "DS",
       clickable: true,
       cardClass: "card--lime"
     },
     {
       key: "ROUTE_ISSUES",
-      title: "Route Issues",
-      description: "Delivery route problems",
+      title: "Route Problems",
+      description: "Delays and issues on delivery routes",
       iconLabel: "RT",
       clickable: true,
       cardClass: "card--slate"
@@ -37,7 +37,7 @@ export default function DashboardHome({ onSelect }) {
     {
       key: "OPERATION_ERRORS",
       title: "Operation Errors",
-      description: "Operational and system issues",
+      description: "Machine and system problems in warehouse",
       iconLabel: "OP",
       clickable: true,
       cardClass: "card--gray"
@@ -45,7 +45,7 @@ export default function DashboardHome({ onSelect }) {
     {
       key: "DAILY_TOP_10",
       title: "Daily Top 10",
-      description: "Top issues summary",
+      description: "Today's biggest problems to fix first",
       iconLabel: "10",
       clickable: true,
       cardClass: "card--green"
@@ -58,7 +58,7 @@ export default function DashboardHome({ onSelect }) {
         <div>
           <h1 className="dashboard-title">Exception Management System</h1>
           <p className="dashboard-subtitle">
-            All records are captured from SuperDisha and SuperOps apps. Monitor and manage operational exceptions in real-time.
+            All records come from SuperDisha and SuperOps apps. Track and fix warehouse problems here.
           </p>
         </div>
        

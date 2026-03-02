@@ -169,7 +169,7 @@ export default function TopIssuesScreen({ onBack }) {
         <div>
           <h2 className="category-title">Daily Top 10 Issues</h2>
           <p className="category-subtitle">
-            Prioritised list of the most critical operational exceptions across QC, stock, dispatch, route, and system modules.
+            Today's top problems from all categories. Fix these first.
           </p>
         </div>
       </div>
@@ -200,7 +200,7 @@ export default function TopIssuesScreen({ onBack }) {
           Total Records: <strong>{rows.length}</strong>
         </span>
         <span className="pill pill-outline">
-          Score = (Today Issue Count × 2) + Last 7 Days Repeat Count
+          Score = (Today's count × 2) + Last 7 days repeat count
         </span>
       </p>
 

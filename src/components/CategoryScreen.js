@@ -7,7 +7,7 @@ const CATEGORY_CONFIG = {
   QC_FAILURE: {
     label: "QC Failures",
     description:
-      "Track and resolve product quality issues detected during picking, with full visibility of repacking and disposal actions.",
+      "Items that failed quality check. See what was dumped, repacked, or treated.",
     statusOptions: ["OPEN", "DUMPED", "REPACKING", "FUMIGATION", "CLOSED"],
     columns: [
       "id",
@@ -34,7 +34,7 @@ const CATEGORY_CONFIG = {
   STOCK_MISMATCH: {
     label: "Stock Mismatch Alerts",
     description:
-      "Monitor cases where physical stock exists but system inventory is incorrect, and drive fast verification and correction.",
+      "Stock in warehouse does not match what the system shows. Needs counting and fixing.",
     statusOptions: ["OPEN", "VERIFIED", "RESOLVED"],
     columns: [
       "id",
@@ -51,9 +51,9 @@ const CATEGORY_CONFIG = {
     ]
   },
   DISPATCH_LOGS: {
-    label: "Dispatch Support & Operational Issues",
+    label: "Dispatch Issues",
     description:
-      "Capture picking, loading, and dispatch problems from the floor and coordinate rapid operational support.",
+      "Problems found during picking, loading, or sending out orders.",
     statusOptions: ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
     columns: [
       "id",
@@ -72,9 +72,9 @@ const CATEGORY_CONFIG = {
     ]
   },
   ROUTE_ISSUES: {
-    label: "Route Delay Monitoring",
+    label: "Route Problems",
     description:
-      "Let drivers report en-route incidents and delays so transport teams can intervene quickly.",
+      "Drivers report problems on the road like breakdowns, traffic, or wrong address.",
     statusOptions: ["OPEN", "SUPPORT_SENT", "RESOLVED"],
     columns: [
       "id",
@@ -96,7 +96,7 @@ const CATEGORY_CONFIG = {
   OPERATION_ERRORS: {
     label: "Operation Errors",
     description:
-      "Centralise high-level operational and system errors for management visibility and follow-up.",
+      "Machine breakdowns, system errors, and other warehouse problems.",
     statusOptions: ["OPEN", "IN_PROGRESS", "RESOLVED", "CLOSED"],
     columns: [
       "id",

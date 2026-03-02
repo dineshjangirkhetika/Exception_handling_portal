@@ -1,4 +1,4 @@
-// Fallback seed data - used when Supabase REST API is unreachable
+// Sample data - used when database is not available (offline mode)
 const SEED_DATA = {
   QC_FAILURE: [
     // Today: 2-3-2026

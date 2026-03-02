@@ -1,16 +1,16 @@
-// Central mock data source for the dashboard.
-// This file exposes the issue tables used across the app:
-// - qcFailures
-// - stockMismatch
-// - dispatchLogs
-// - routeIssues
-// - operationErrors
+// Sample data for the dashboard.
+// Has all 5 types of records:
+// - qcFailures      = items that failed quality check
+// - stockMismatch   = stock count does not match system
+// - dispatchLogs    = problems during packing and sending
+// - routeIssues     = driver problems on the road
+// - operationErrors = machine and system problems
 //
-// It also provides a default export object so that screens can import either:
+// You can use it like this:
 //   import { qcFailures } from "./data";
 //   import data from "./data";
 
-// Helper to build ISO timestamps within and before the last 7 days.
+// Helper to make dates for the last 7 days.
 const today = "2026-02-26";
 const ts = (dayOffset, time = "10:00:00") => {
   const base = new Date(`${today}T${time}Z`);
@@ -216,8 +216,7 @@ export const routeIssues = [
   }
 ];
 
-// High-level operational/system errors not tied directly
-// to QC, stock, dispatch, or route flows.
+// Machine and system problems in the warehouse.
 export const operationErrors = [
   {
     id: 1,
@@ -248,10 +247,10 @@ export const operationErrors = [
   }
 ];
 
-// Alias used by the simple `Dashboard` table view.
+// Same data with a different name for the old Dashboard view.
 export const dispatchIssues = dispatchLogs;
 
-// Default export to keep existing imports working.
+// All data together so you can import everything at once.
 const data = {
   qcFailures,
   stockMismatch,
