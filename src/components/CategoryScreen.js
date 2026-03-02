@@ -349,10 +349,13 @@ export default function CategoryScreen({ category, onBack }) {
   const filteredRecords = records.filter(r => {
     if (!selectedDate) return true;
     if (!r.created_at) return false;
-    // Compare using local date to handle timezone differences
-    const recordDate = new Date(r.created_at);
-    const localDate = recordDate.toLocaleDateString("en-CA"); // YYYY-MM-DD format
-    return localDate === selectedDate;
+    // Parse the timestamp and compare using local date
+    const d = new Date(r.created_at);
+    if (isNaN(d.getTime())) return false;
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}` === selectedDate;
   });
 
   const visibleColumns =
