@@ -381,7 +381,7 @@ Exception_handling_portal/
 
 ## Demo
 
-![Exception Management System Demo](demo.gif)
+![Exception Management System Demo](public/demo.gif)
 
 **Demo walkthrough:**
 1. **Dashboard Home** -- All 6 category cards with simple descriptions
