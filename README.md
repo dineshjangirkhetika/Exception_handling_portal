@@ -72,10 +72,10 @@ The application uses a **Supabase PostgreSQL** database with 5 tables, auto-gene
 
 | Table | Fields | Records | Description |
 |-------|--------|---------|-------------|
-| `qc_failures` | 19 | 17+ | QC failure tracking with item details, batch info, QR codes, reasons, and corrective actions (captured from SuperDisha app) |
-| `stock_mismatch` | 11 | 11+ | Stock inventory discrepancy alerts with scenario classification and verification workflow (captured from SuperDisha app) |
+| `qc_failures` | 19 | 17+ | QC failure tracking with item details, batch info, QR codes, reasons, and corrective actions (captured from SuperOps app) |
+| `stock_mismatch` | 11 | 11+ | Stock inventory discrepancy alerts with scenario classification and verification workflow (captured from SuperOps app) |
 | `dispatch_support_logs` | 13 | 12+ | Dispatch, picking, and loading issue logs with photo support and issue categorization (captured from SuperOps app) |
-| `route_issues` | 14 | 11+ | Route delay and incident reports with GPS coordinates and help request flags (captured from SuperOps app) |
+| `route_issues` | 14 | 11+ | Route delay and incident reports with GPS coordinates and help request flags (captured from SuperDisha app) |
 | `operation_errors` | 8 | 14+ | General operational and system error tracking (captured from SuperOps app) |
 
 **Database Features:**
