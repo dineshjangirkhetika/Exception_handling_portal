@@ -281,8 +281,7 @@ export default function CategoryScreen({ category, onBack }) {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
-  const todayISO = new Date().toISOString().slice(0, 10);
-  const [selectedDate, setSelectedDate] = useState(todayISO);
+  const [selectedDate, setSelectedDate] = useState("");
 
   const config = CATEGORY_CONFIG[category] || {
     label: category.replace("_", " "),
@@ -302,7 +301,7 @@ export default function CategoryScreen({ category, onBack }) {
   }, [loadRecords]);
 
   const handleRefresh = () => {
-    setSelectedDate(todayISO);
+    setSelectedDate("");
     loadRecords();
   };
 
@@ -345,8 +344,11 @@ export default function CategoryScreen({ category, onBack }) {
 
   const filteredRecords = records.filter(r => {
     if (!selectedDate) return true;
-    const recordDay = r.created_at?.slice(0, 10);
-    return recordDay === selectedDate;
+    if (!r.created_at) return false;
+    // Compare using local date to handle timezone differences
+    const recordDate = new Date(r.created_at);
+    const localDate = recordDate.toLocaleDateString("en-CA"); // YYYY-MM-DD format
+    return localDate === selectedDate;
   });
 
   const visibleColumns =
@@ -384,16 +386,30 @@ export default function CategoryScreen({ category, onBack }) {
       <div className="filter-bar">
         <span>
           Total Records: <strong>{records.length}</strong>
+          {selectedDate && (
+            <> | Showing: <strong>{filteredRecords.length}</strong></>
+          )}
         </span>
 
-        <label>
-          Date:
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={e => setSelectedDate(e.target.value)}
-          />
-        </label>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <label>
+            Date:
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={e => setSelectedDate(e.target.value)}
+            />
+          </label>
+          {selectedDate && (
+            <button
+              className="toolbar-button"
+              onClick={() => setSelectedDate("")}
+              style={{ padding: "4px 10px", fontSize: "0.85rem" }}
+            >
+              Show All
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (
