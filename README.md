@@ -426,7 +426,6 @@ We built a **centralized Exception Management System** -- a web-based platform t
 - Scalable design using Supabase Cloud (PostgreSQL + Row Level Security + DB Triggers)
 - 5 PostgreSQL tables with 65+ fields covering complete exception lifecycle
 - Database triggers for automatic IST date population on insert
-- Client-side caching layer with localStorage (10-min TTL, versioned cache invalidation)
 - Embedded seed data for zero-downtime demo capability
 - Cloud-native deployment on GitHub Pages + Supabase Cloud (Mumbai region ap-south-1)
 
